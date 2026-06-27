@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# Editor/OS cruft
+*.swp
+*~
+
+# Installer backups created on the target machine (never part of the repo)
+*.bak-*
+
+# Local scratch
+/tmp/
