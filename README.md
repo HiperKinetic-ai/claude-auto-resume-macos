@@ -76,6 +76,13 @@ auto-resume --test-terminal     # grant the one-time macOS "control Terminal" pr
 
 ## Usage
 
+> ⚠️ **Run `auto-resume` in a terminal — not in the Claude Code prompt.** It's a shell command, not a
+> Claude Code command. If you type it into Claude Code (e.g. right when you've hit the limit), it's
+> just sent to Claude as a message and does nothing. Either open a separate terminal and `cd` to your
+> project, **or** from inside Claude Code run `! ~/.claude/resume-at-reset.sh` — the `!` prefix runs a
+> local shell command (no API call, so it works even while you're rate‑limited) in the session's own
+> directory.
+
 ```bash
 auto-resume                 # arm the current project's most-recent session (after a 5h stop)
 auto-resume --rc            # same, but also enable Remote Control + push (phone reachable)

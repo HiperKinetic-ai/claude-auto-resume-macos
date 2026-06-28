@@ -3,6 +3,11 @@
 `auto-resume` is a pass‑through alias for `~/.claude/resume-at-reset.sh` — every command and flag
 below works with either name. (If you skipped the alias, call the script directly.)
 
+> ⚠️ **This is a shell command — run it in a terminal, not in the Claude Code prompt.** Typing
+> `auto-resume` into Claude Code just sends it to Claude as a message (and if you're at the limit,
+> you'll only see Claude's limit error). From inside Claude Code, prefix with `!` and use the full
+> path — `! ~/.claude/resume-at-reset.sh` — which runs locally (no API quota) in the session's dir.
+
 ## Commands
 
 | Command | What it does |
