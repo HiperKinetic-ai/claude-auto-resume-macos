@@ -10,8 +10,9 @@
 # auto mode only (never bypassPermissions). Remote Control + push only when armed
 # with --rc (the snapshot carries rc/rc_name/require_rc + a per-run settings file).
 #
-# bash 3.2 compatible. Uses python3 for JSON + safe file generation, perl for the
-# probe timeout (macOS has no timeout/gtimeout).
+# bash 3.2 compatible. Uses python3 for JSON + safe file generation, and a SIGKILL
+# watchdog to hard-bound the probe (macOS has no timeout(1)); perl alarm bounds the
+# osascript Terminal-open.
 
 set -u
 
@@ -146,10 +147,35 @@ PY
 }
 
 run_probe_once() {
-  # Bounded by perl alarm (no timeout(1) on macOS). Sets PROBE_OUT/PROBE_RC.
-  PROBE_OUT="$(/usr/bin/perl -e 'alarm shift @ARGV; exec @ARGV' "$PROBE_TIMEOUT_S" \
-      "$CLAUDE_BIN" -p --no-session-persistence --output-format json "Reply ok." 2>&1)"
+  # Bound the probe with a hard watchdog: SIGTERM at the limit, then an
+  # uncatchable SIGKILL a few seconds later. macOS has no timeout(1), and a
+  # slow/cold `claude` can outlive a plain SIGALRM (observed overrunning a 60s
+  # bound by minutes), so we escalate to SIGKILL. Sets PROBE_OUT/PROBE_RC
+  # (a killed probe yields rc>128 -> classified as timeout/network).
+  local out cpid wpid
+  out="$(mktemp "${TMPDIR:-/tmp}/car-probe.XXXXXX")"
+  "$CLAUDE_BIN" -p --no-session-persistence --output-format json "Reply ok." >"$out" 2>&1 &
+  cpid=$!
+  (
+    waited=0
+    while kill -0 "$cpid" 2>/dev/null; do
+      if [ "$waited" -ge "$PROBE_TIMEOUT_S" ]; then
+        kill -TERM "$cpid" 2>/dev/null
+        sleep 3
+        kill -KILL "$cpid" 2>/dev/null
+        break
+      fi
+      sleep 1
+      waited=$(( waited + 1 ))
+    done
+  ) &
+  wpid=$!
+  wait "$cpid" 2>/dev/null
   PROBE_RC=$?
+  kill "$wpid" 2>/dev/null
+  wait "$wpid" 2>/dev/null
+  PROBE_OUT="$(cat "$out" 2>/dev/null)"
+  rm -f "$out" 2>/dev/null
 }
 
 probe_until_ready() {
